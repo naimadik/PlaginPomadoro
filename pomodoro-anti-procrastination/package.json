@@ -1,8 +1,8 @@
 {
   "name": "pomodoro-anti-procrastination",
   "displayName": "🍅 Pomodoro Timer",
-  "description": "Simple Pomodoro timer for focus",
-  "version": "0.1.0",
+  "description": "Simple Pomodoro timer with website blocking",
+  "version": "0.2.0",
   "engines": {"vscode": "^1.60.0"},
   "categories": ["Other"],
   "activationEvents": [],
@@ -19,7 +19,17 @@
         "title": "Stop Pomodoro",
         "category": "Pomodoro"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Pomodoro",
+      "properties": {
+        "pomodoro.blockedSites": {
+          "type": "array",
+          "default": ["youtube.com", "facebook.com", "instagram.com", "twitter.com"],
+          "description": "Websites to block during focus time"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
