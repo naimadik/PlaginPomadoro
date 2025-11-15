@@ -1,0 +1,33 @@
+{
+  "name": "pomodoro-anti-procrastination",
+  "displayName": "🍅 Pomodoro Timer",
+  "description": "Simple Pomodoro timer for focus",
+  "version": "0.1.0",
+  "engines": {"vscode": "^1.60.0"},
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pomodoro.start",
+        "title": "Start Pomodoro",
+        "category": "Pomodoro"
+      },
+      {
+        "command": "pomodoro.stop", 
+        "title": "Stop Pomodoro",
+        "category": "Pomodoro"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc extension.ts --outDir .",
+    "watch": "tsc -w extension.ts --outDir ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "typescript": "^4.9.4"
+  }
+}
