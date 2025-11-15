@@ -1,8 +1,8 @@
 {
   "name": "pomodoro-anti-procrastination",
-  "displayName": "🍅 Pomodoro Timer",
-  "description": "Simple Pomodoro timer with website blocking",
-  "version": "0.2.0",
+  "displayName": "🍅 Pomodoro Anti-Procrastination",
+  "description": "Pomodoro timer with website blocking for MacOS",
+  "version": "1.0.0",
   "engines": {"vscode": "^1.60.0"},
   "categories": ["Other"],
   "activationEvents": [],
@@ -11,7 +11,12 @@
     "commands": [
       {
         "command": "pomodoro.start",
-        "title": "Start Pomodoro",
+        "title": "Start Pomodoro (25/5)",
+        "category": "Pomodoro"
+      },
+      {
+        "command": "pomodoro.startCustom", 
+        "title": "Start Custom Pomodoro",
         "category": "Pomodoro"
       },
       {
@@ -20,12 +25,29 @@
         "category": "Pomodoro"
       }
     ],
+    "keybindings": [
+      {
+        "command": "pomodoro.start",
+        "key": "ctrl+cmd+p",
+        "mac": "ctrl+cmd+p"
+      }
+    ],
     "configuration": {
       "title": "Pomodoro",
       "properties": {
+        "pomodoro.workTime": {
+          "type": "number",
+          "default": 25,
+          "description": "Default work time in minutes"
+        },
+        "pomodoro.breakTime": {
+          "type": "number", 
+          "default": 5,
+          "description": "Default break time in minutes"
+        },
         "pomodoro.blockedSites": {
           "type": "array",
-          "default": ["youtube.com", "facebook.com", "instagram.com", "twitter.com"],
+          "default": ["youtube.com", "facebook.com", "instagram.com", "twitter.com", "reddit.com"],
           "description": "Websites to block during focus time"
         }
       }

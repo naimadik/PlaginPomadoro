@@ -11,14 +11,78 @@ let isRunning: boolean = false;
 let isBreak: boolean = false;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Pomodoro with website blocking activated!');
+    console.log('🍅 Pomodoro Anti-Procrastination activated!');
 
     let statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBar.text = "🍅 Ready";
     statusBar.show();
 
     let startCmd = vscode.commands.registerCommand('pomodoro.start', () => {
-        startSession(25, 5);
+        let config = vscode.workspace.getConfiguration('pomodoro');
+        let workTime = config.get<number>('workTime', 25);
+        let breakTime = config.get<number>('breakTime', 5);
+        startSession(workTime, breakTime);
+    });
+
+    let startCustomCmd = vscode.commands.registerCommand('pomodoro.startCustom', async () => {
+        if (isRunning) {
+            vscode.window.showWarningMessage('Stop current session first!');
+            return;
+        }
+
+        // Choose work time
+        let workTime = await vscode.window.showQuickPick([
+            { label: '15 minutes', time: 15 },
+            { label: '25 minutes', time: 25 },
+            { label: '30 minutes', time: 30 },
+            { label: '45 minutes', time: 45 },
+            { label: 'Custom...', time: 0 }
+        ], { placeHolder: 'Select work time' });
+
+        if (!workTime) return;
+
+        let workMinutes = workTime.time;
+        if (workMinutes === 0) {
+            let custom = await vscode.window.showInputBox({
+                placeHolder: 'Work minutes (e.g., 29)',
+                validateInput: (val) => {
+                    let num = parseInt(val);
+                    return (num > 0 && num <= 120) ? null : 'Enter 1-120 minutes';
+                }
+            });
+            if (!custom) return;
+            workMinutes = parseInt(custom);
+        }
+
+        // Choose break time  
+        let breakTime = await vscode.window.showQuickPick([
+            { label: '5 minutes', time: 5 },
+            { label: '10 minutes', time: 10 },
+            { label: '15 minutes', time: 15 },
+            { label: 'Custom...', time: 0 }
+        ], { placeHolder: 'Select break time' });
+
+        if (!breakTime) return;
+
+        let breakMinutes = breakTime.time;
+        if (breakMinutes === 0) {
+            let custom = await vscode.window.showInputBox({
+                placeHolder: 'Break minutes (e.g., 11)',
+                validateInput: (val) => {
+                    let num = parseInt(val);
+                    return (num > 0 && num <= 60) ? null : 'Enter 1-60 minutes';
+                }
+            });
+            if (!custom) return;
+            breakMinutes = parseInt(custom);
+        }
+
+        // Save settings
+        let config = vscode.workspace.getConfiguration('pomodoro');
+        await config.update('workTime', workMinutes, true);
+        await config.update('breakTime', breakMinutes, true);
+
+        startSession(workMinutes, breakMinutes);
     });
 
     let stopCmd = vscode.commands.registerCommand('pomodoro.stop', () => {
@@ -26,33 +90,41 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     function startSession(workMinutes: number, breakMinutes: number) {
-        if (isRunning) {
-            vscode.window.showWarningMessage('Timer already running!');
-            return;
-        }
+        if (isRunning) return;
 
         timeLeft = workMinutes * 60;
         isRunning = true;
         isBreak = false;
         
-        vscode.window.showInformationMessage(`🍅 Pomodoro started! ${workMinutes} minutes focus time.`);
+        vscode.window.showInformationMessage(
+            `🍅 Pomodoro started! ${workMinutes} minutes focus time.`
+        );
 
-        // Start monitoring for distractions
         startMonitoring();
+        startTimer(workMinutes, breakMinutes);
+        updateStatusBar();
+    }
 
-        // Start timer
+    function startTimer(workMinutes: number, breakMinutes: number) {
         timer = setInterval(() => {
             timeLeft--;
             updateStatusBar();
 
             if (timeLeft <= 0) {
                 if (!isBreak) {
-                    // Work session done, start break
+                    // Work → Break
                     startBreak(breakMinutes);
                 } else {
-                    // Break session done
+                    // Break → Stop
                     stopSession();
-                    vscode.window.showInformationMessage('Break over! Ready to work again?');
+                    vscode.window.showInformationMessage(
+                        'Break over! Ready for next session?', 
+                        'Start New Session'
+                    ).then(choice => {
+                        if (choice === 'Start New Session') {
+                            startSession(workMinutes, breakMinutes);
+                        }
+                    });
                 }
             }
         }, 1000);
@@ -63,16 +135,13 @@ export function activate(context: vscode.ExtensionContext) {
         timeLeft = breakMinutes * 60;
         isBreak = true;
         
-        vscode.window.showInformationMessage(`☕ Break started! ${breakMinutes} minutes relax.`);
+        vscode.window.showInformationMessage(
+            `🎉 Work session complete! ${breakMinutes} minute break started.`
+        );
 
         timer = setInterval(() => {
             timeLeft--;
             updateStatusBar();
-
-            if (timeLeft <= 0) {
-                stopSession();
-                vscode.window.showInformationMessage('Break over! Ready to work again?');
-            }
         }, 1000);
     }
 
@@ -87,16 +156,16 @@ export function activate(context: vscode.ExtensionContext) {
         }
         isRunning = false;
         statusBar.text = "🍅 Stopped";
-        vscode.window.showInformationMessage('Timer stopped.');
+        statusBar.backgroundColor = undefined;
     }
 
     function updateStatusBar() {
         let minutes = Math.floor(timeLeft / 60);
         let seconds = timeLeft % 60;
         let icon = isBreak ? '☕' : '🍅';
-        statusBar.text = `${icon} ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        let label = isBreak ? 'Break' : 'Focus';
+        statusBar.text = `${icon} ${label} ${minutes}:${seconds.toString().padStart(2, '0')}`;
         
-        // Color coding
         if (isBreak) {
             statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
         } else {
@@ -105,20 +174,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     async function startMonitoring() {
-        if (monitor) {
-            clearInterval(monitor);
-        }
-
         monitor = setInterval(async () => {
             if (!isRunning || isBreak) return;
 
             try {
-                let windowInfo = await getActiveWindow();
-                if (isBlockedSite(windowInfo.title)) {
-                    await showWarning(windowInfo.title);
+                let window = await getActiveWindow();
+                if (isBlockedSite(window.title)) {
+                    await handleDistraction(window.title);
                 }
             } catch (error) {
-                // Ignore errors
+                // Ignore monitoring errors
             }
         }, 3000);
     }
@@ -134,40 +199,50 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    function isBlockedSite(windowTitle: string): boolean {
-        if (!windowTitle) return false;
+    function isBlockedSite(title: string): boolean {
+        if (!title) return false;
 
         let config = vscode.workspace.getConfiguration('pomodoro');
-        let blockedSites = config.get<string[]>('blockedSites', []);
+        let blocked = config.get<string[]>('blockedSites', []);
         
-        return blockedSites.some(site => 
-            windowTitle.toLowerCase().includes(site.toLowerCase())
-        );
+        return blocked.some(site => title.toLowerCase().includes(site.toLowerCase()));
     }
 
-    async function showWarning(site: string) {
+    async function handleDistraction(site: string) {
+        let shortSite = site.length > 40 ? site.substring(0, 40) + '...' : site;
         let messages = [
-            "Эй! Фокусируйся! 🍅",
-            "Не отвлекайся на " + site + "!",
-            "Вернись к работе! 💻",
-            "Помни о Pomodoro! ⏰"
+            "Фокусируйся! Ты в Pomodoro! 🍅",
+            "Вернись к работе! " + shortSite + " подождет!",
+            "Не отвлекайся! Дедлайн не ждет! ⏰",
+            "Код ждет! Закрой " + shortSite + "! 💻"
         ];
 
-        let randomMsg = messages[Math.floor(Math.random() * messages.length)];
-        
         let choice = await vscode.window.showWarningMessage(
-            randomMsg,
+            messages[Math.floor(Math.random() * messages.length)],
             { modal: true },
-            "OK, возвращаюсь",
-            "Игнорировать"
+            "OK, закрываю",
+            "Еще 5 минут..."
         );
 
-        if (choice === "OK, возвращаюсь") {
-            vscode.window.showInformationMessage("Отлично! Продолжаем работать! 🎯");
+        if (choice === "OK, закрываю") {
+            vscode.window.showInformationMessage("Супер! Возвращаемся к работе! 🚀");
         }
     }
 
-    context.subscriptions.push(startCmd, stopCmd, statusBar);
+    // Show welcome message
+    vscode.window.showInformationMessage(
+        '🍅 Pomodoro Anti-Procrastination ready! Press Ctrl+Cmd+P to start.',
+        'Quick Start (25/5)',
+        'Custom Time'
+    ).then(choice => {
+        if (choice === 'Quick Start (25/5)') {
+            vscode.commands.executeCommand('pomodoro.start');
+        } else if (choice === 'Custom Time') {
+            vscode.commands.executeCommand('pomodoro.startCustom');
+        }
+    });
+
+    context.subscriptions.push(startCmd, startCustomCmd, stopCmd, statusBar);
 }
 
 export function deactivate() {
