@@ -4,7 +4,6 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-// Глобальные переменные таймера
 let timer: NodeJS.Timeout | undefined;
 let monitor: NodeJS.Timeout | undefined;
 let timeLeft: number = 0;
@@ -15,14 +14,12 @@ let statusBar: vscode.StatusBarItem;
 export function activate(context: vscode.ExtensionContext) {
     console.log('🍅 Pomodoro Anti-Procrastination activated!');
     
-    // Создаем статус бар
     statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBar.text = "🍅 Ready";
     statusBar.tooltip = "Pomodoro Anti-Procrastination - Click to start";
     statusBar.command = 'pomodoro.quickStart';
     statusBar.show();
 
-    // Регистрируем все команды
     const commands = [
         vscode.commands.registerCommand('pomodoro.quickStart', quickStart),
         vscode.commands.registerCommand('pomodoro.start', startPomodoro),
@@ -35,7 +32,6 @@ export function activate(context: vscode.ExtensionContext) {
     commands.forEach(cmd => context.subscriptions.push(cmd));
     context.subscriptions.push(statusBar);
 
-    // Приветственное сообщение
     setTimeout(() => {
         vscode.window.showInformationMessage(
             '🍅 Pomodoro Anti-Procrastination готов! Нажми Cmd+Shift+8 для быстрого старта.',
@@ -54,7 +50,6 @@ export function activate(context: vscode.ExtensionContext) {
     }, 3000);
 }
 
-// Команда быстрого старта
 async function quickStart() {
     console.log('🍅 Quick Start command triggered');
     
@@ -78,7 +73,6 @@ async function quickStart() {
     }
 }
 
-// Команда стандартного старта (строго 25/5, независимо от сохранённых настроек)
 async function startPomodoro() {
     if (isRunning) {
         vscode.window.showWarningMessage('Сначала останови текущую сессию!');
@@ -91,7 +85,6 @@ async function startPomodoro() {
     startSession(workTime, breakTime);
 }
 
-// Команда кастомного старта
 async function startCustomPomodoro() {
     if (isRunning) {
         vscode.window.showWarningMessage('Сначала останови текущую сессию!');
@@ -99,7 +92,6 @@ async function startCustomPomodoro() {
     }
 
     try {
-        // Выбор времени работы
         const workTime = await vscode.window.showQuickPick([
             { label: '15 минут', time: 15 },
             { label: '25 минут', time: 25 },
@@ -122,8 +114,6 @@ async function startCustomPomodoro() {
             if (!custom) { return; }
             workMinutes = parseInt(custom);
         }
-
-        // Выбор времени перерыва
         const breakTime = await vscode.window.showQuickPick([
             { label: '5 минут', time: 5 },
             { label: '10 минут', time: 10 },
@@ -146,7 +136,6 @@ async function startCustomPomodoro() {
             breakMinutes = parseInt(custom);
         }
 
-        // Проверяем корректность введенных значений
         if (isNaN(workMinutes) || workMinutes <= 0 || workMinutes > 180) {
             vscode.window.showErrorMessage('Некорректное время работы. Должно быть от 1 до 180 минут.');
             return;
@@ -157,7 +146,6 @@ async function startCustomPomodoro() {
             return;
         }
 
-        // Сохраняем настройки
         const config = vscode.workspace.getConfiguration('pomodoro');
         await config.update('workTime', workMinutes, vscode.ConfigurationTarget.Global);
         await config.update('breakTime', breakMinutes, vscode.ConfigurationTarget.Global);
@@ -172,12 +160,10 @@ async function startCustomPomodoro() {
     }
 }
 
-// Команда остановки
 function stopPomodoro() {
     stopSession();
 }
 
-// Тест мониторинга
 async function testMonitoring() {
     const windowInfo = await getActiveWindowInfo();
     if (windowInfo) {
@@ -191,7 +177,6 @@ async function testMonitoring() {
     }
 }
 
-// Команда принудительного закрытия вкладок
 async function forceCloseTabs() {
     const config = vscode.workspace.getConfiguration('pomodoro');
     const blockedSites = config.get<string[]>('blockedSites', []);
@@ -209,7 +194,6 @@ async function forceCloseTabs() {
     }
 }
 
-// Основные функции Pomodoro
 function startSession(workMinutes: number, breakMinutes: number) {
     if (isRunning) { 
         vscode.window.showWarningMessage('Pomodoro уже запущен! Остановите текущую сессию перед запуском новой.');
@@ -221,7 +205,6 @@ function startSession(workMinutes: number, breakMinutes: number) {
         return;
     }
 
-    // Останавливаем предыдущие таймеры, если они есть
     if (timer) {
         clearInterval(timer);
         timer = undefined;
@@ -243,7 +226,6 @@ function startSession(workMinutes: number, breakMinutes: number) {
     startTimer(workMinutes, breakMinutes);
     updateStatusBar();
 
-    // Фокусируем VSCode
     vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
 }
 
@@ -268,10 +250,10 @@ function startTimer(workMinutes: number, breakMinutes: number) {
 
         if (timeLeft <= 0) {
             if (!isBreak) {
-                // Работа → Перерыв
+               
                 startBreak(breakMinutes);
             } else {
-                // Перерыв → Стоп
+              
                 stopSession();
                 vscode.window.showInformationMessage(
                     '🎉 Перерыв окончен! Готов к следующей сессии?', 
@@ -299,7 +281,6 @@ function startBreak(breakMinutes: number) {
         `🎉 Рабочая сессия завершена! Начинается ${breakMinutes}-минутный перерыв.`
     );
 
-    // Останавливаем мониторинг во время перерыва
     if (monitor) {
         clearInterval(monitor);
         monitor = undefined;
@@ -368,7 +349,6 @@ function formatTime(seconds: number): string {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Мониторинг окон
 async function startMonitoring() {
     console.log('🍅 Запускаю мониторинг окон...');
     
@@ -430,7 +410,6 @@ function isDistractingWindow(windowInfo: {title: string; app: string} | null): b
     const title = windowInfo.title.toLowerCase();
     const app = windowInfo.app.toLowerCase();
 
-    // Проверяем, что это браузер
     const browsers = ['chrome', 'safari', 'firefox', 'edge', 'opera', 'brave'];
     const isBrowser = browsers.some(browser => app.includes(browser));
 
@@ -438,7 +417,6 @@ function isDistractingWindow(windowInfo: {title: string; app: string} | null): b
         return false;
     }
 
-    // Проверяем заблокированные сайты
     const isDistracting = blockedSites.some(site => 
         title.includes(site.toLowerCase())
     );
@@ -459,15 +437,10 @@ async function handleDistraction(windowInfo: {title: string; app: string}): Prom
 
     const config = vscode.workspace.getConfiguration('pomodoro');
     const autoClose = config.get<boolean>('autoCloseTabs', false);
-
-    // Показываем системное предупреждение поверх текущего приложения
     await showSystemAlert("Помидор следит!", `${windowInfo.app}: ${shortTitle}`);
-
-    // Немедленно фокусируем VSCode
     vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
 
     if (autoClose) {
-        // Автоматическое закрытие вкладок
         try {
             const blockedSites = config.get<string[]>('blockedSites', []);
             
@@ -495,16 +468,13 @@ async function handleDistraction(windowInfo: {title: string; app: string}): Prom
                     }
                 });
             } else {
-                // Если вкладки не закрылись, показываем предупреждение
                 showDistractionDialog(shortTitle, windowInfo.app);
             }
         } catch (error) {
             console.log('🍅 Ошибка автоматического закрытия вкладок:', error);
-            // Если автоматическое закрытие не сработало, показываем диалог
             showDistractionDialog(shortTitle, windowInfo.app);
         }
     } else {
-        // Показываем диалог для ручного закрытия
         showDistractionDialog(shortTitle, windowInfo.app);
     }
 }
@@ -550,15 +520,12 @@ async function showSystemAlert(title: string, message: string): Promise<void> {
         console.log('🍅 Ошибка показа системного предупреждения:', error);
     }
 }
-// Функции для закрытия вкладок браузера
 async function closeBrowserTabs(blockedSites: string[]): Promise<{closedCount: number}> {
     let closedCount = 0;
     
     try {
-        // Закрываем вкладки в Chrome
         closedCount += await closeChromeTabs(blockedSites);
         
-        // Закрываем вкладки в Safari
         closedCount += await closeSafariTabs(blockedSites);
         
         return { closedCount };
@@ -576,7 +543,6 @@ async function closeChromeTabs(blockedSites: string[]): Promise<number> {
     }
     
     try {
-        // Создаем список сайтов для проверки в AppleScript
         const sitesList = blockedSites.map(site => `"${site}"`).join(', ');
         const script = `
             tell application "Google Chrome"
@@ -621,7 +587,6 @@ async function closeSafariTabs(blockedSites: string[]): Promise<number> {
     }
     
     try {
-        // Создаем список сайтов для проверки в AppleScript
         const sitesList = blockedSites.map(site => `"${site}"`).join(', ');
         const script = `
             tell application "Safari"
