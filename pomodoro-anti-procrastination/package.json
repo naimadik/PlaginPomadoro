@@ -5,8 +5,16 @@
   "version": "1.0.0",
   "engines": {"vscode": "^1.60.0"},
   "categories": ["Other"],
-  "activationEvents": [],
-  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:pomodoro.start",
+    "onCommand:pomodoro.startCustom", 
+    "onCommand:pomodoro.quickStart",
+    "onCommand:pomodoro.stop",
+    "onCommand:pomodoro.testMonitor",
+    "onCommand:pomodoro.forceCloseTabs"
+  ],
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
@@ -20,16 +28,31 @@
         "category": "Pomodoro"
       },
       {
+        "command": "pomodoro.quickStart", 
+        "title": "Quick Start Pomodoro",
+        "category": "Pomodoro"
+      },
+      {
         "command": "pomodoro.stop", 
         "title": "Stop Pomodoro",
+        "category": "Pomodoro"
+      },
+      {
+        "command": "pomodoro.testMonitor",
+        "title": "Test Website Monitoring",
+        "category": "Pomodoro"
+      },
+      {
+        "command": "pomodoro.forceCloseTabs",
+        "title": "Force Close Distracting Tabs",
         "category": "Pomodoro"
       }
     ],
     "keybindings": [
       {
-        "command": "pomodoro.start",
-        "key": "ctrl+cmd+p",
-        "mac": "ctrl+cmd+p"
+        "command": "pomodoro.quickStart",
+        "key": "cmd+shift+8",
+        "mac": "cmd+shift+8"
       }
     ],
     "configuration": {
@@ -47,19 +70,43 @@
         },
         "pomodoro.blockedSites": {
           "type": "array",
-          "default": ["youtube.com", "facebook.com", "instagram.com", "twitter.com", "reddit.com"],
-          "description": "Websites to block during focus time"
+          "default": [
+            "youtube",
+            "twitch",
+            "vk",
+            "vkontakte",
+            "reddit",
+            "instagram",
+            "tiktok",
+            "facebook",
+            "netflix",
+            "twitter",
+            "x.com"
+          ],
+          "description": "Websites to block during focus time (used as keywords in tab titles/URLs)"
+        },
+        "pomodoro.enableStrictMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable strict website blocking mode"
+        },
+        "pomodoro.autoCloseTabs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically close distracting tabs (requires permissions)"
         }
       }
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc extension.ts --outDir .",
-    "watch": "tsc -w extension.ts --outDir ."
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0",
+    "@types/node": "16.x",
     "typescript": "^4.9.4"
   }
 }
